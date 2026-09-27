@@ -5096,7 +5096,7 @@ function createLitTitleTex(renderer) {
   canvas.height = h;
   const ctx = canvas.getContext('2d');
   const img = new Image();
-  img.src = '/assets/textures/lit_title.png?v=1';
+  img.src = '/assets/textures/lit_title.png?v=2';
   const tex = new dc(canvas);
   tex.colorSpace = W;
   if (renderer) {
@@ -5109,16 +5109,15 @@ function createLitTitleTex(renderer) {
   };
   function draw() {
     ctx.clearRect(0, 0, w, h);
-    const grad = ctx.createLinearGradient(w * 0.25, 0, w * 0.75, 0);
-    grad.addColorStop(0, '#8ec4be');
-    grad.addColorStop(0.5, '#ecfaf5');
-    grad.addColorStop(1, '#a1d4ce');
+    const grad = ctx.createLinearGradient(0, h * 0.2, 0, h * 0.8);
+    grad.addColorStop(0, '#101c18');
+    grad.addColorStop(1, '#1a2d26');
     ctx.fillStyle = grad;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.font = '700 280px "STK Bureau Serif", "Newsreader", serif';
-    ctx.shadowColor = 'rgba(180, 235, 225, 0.5)';
-    ctx.shadowBlur = 24;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+    ctx.shadowBlur = 14;
     ctx.fillText('LIT', w / 2, h / 2 - 8);
   }
   draw();
