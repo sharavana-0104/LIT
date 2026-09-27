@@ -1,0 +1,292 @@
+/* Bloom QR Modal Styles */
+.bloom-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 20, 16, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.bloom-modal-backdrop.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bloom-modal-card {
+  background: #f0f4f9;
+  width: 100%;
+  max-width: 440px;
+  border-radius: 36px;
+  box-shadow:
+    0 24px 64px -12px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset;
+  padding: 24px 22px 26px 22px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: scale(0.92) translateY(18px);
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease;
+  font-family: 'Google Sans Flex', 'Inter', system-ui, -apple-system, sans-serif;
+  user-select: none;
+}
+
+.bloom-modal-backdrop.is-active .bloom-modal-card {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+.bloom-card-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.bloom-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bloom-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.bloom-name {
+  font-size: 19px;
+  font-weight: 500;
+  color: #1f1d1e;
+  letter-spacing: -0.01em;
+}
+
+.bloom-close-btn {
+  background: #e2e7ee;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444746;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.bloom-close-btn:hover {
+  background: #d4dce6;
+  transform: scale(1.08);
+}
+
+.bloom-close-btn:active {
+  transform: scale(0.95);
+}
+
+.bloom-inner-card {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 28px;
+  padding: 24px 20px 20px 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.06),
+    0 1px 3px rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  text-decoration: none;
+}
+
+.bloom-inner-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.bloom-qr-container {
+  position: relative;
+  width: 290px;
+  max-width: 82vw;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bloom-qr-code {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.bloom-gpay-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 52px;
+  height: 52px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  border: 1.5px solid #eaeaea;
+  pointer-events: none;
+}
+
+.bloom-gpay-badge img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.bloom-upi-id {
+  margin-top: 18px;
+  font-family: 'PP Supply Mono', 'Supply Sans', ui-monospace, monospace;
+  font-size: 13.5px;
+  color: #444746;
+  letter-spacing: -0.01em;
+  text-align: center;
+}
+
+.bloom-card-footer {
+  width: 100%;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.bloom-scan-hint {
+  font-size: 14px;
+  color: #5f6368;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.bloom-open-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #1f1d1e;
+  color: #ffffff;
+  border: none;
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 4px 14px rgba(31, 29, 30, 0.25);
+}
+
+.bloom-open-btn:hover {
+  background: #333132;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(31, 29, 30, 0.35);
+}
+
+.bloom-open-btn:active {
+  transform: translateY(0);
+}
+
+.bloom-open-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Make TAP HOLD button prominently visible in light themes (e.g. Stage 5 white theme) */
+.page-theme-white .next-stage-btn {
+  background: radial-gradient(circle, rgba(31,29,30,0) 0% 24%, #1f1d1e 48%, rgba(31,29,30,0.92) 62%, rgba(31,29,30,0.3) 82%, rgba(31,29,30,0) 100%) !important;
+  box-shadow: 0 0 34px 12px rgba(31, 29, 30, 0.4), 0 0 70px 30px rgba(31, 29, 30, 0.2) !important;
+}
+
+.page-theme-white .next-stage-label {
+  color: #1f1d1e !important;
+  text-shadow: 0 1px 4px rgba(255, 255, 255, 0.8) !important;
+}
+
+.page-theme-white .next-stage-btn-progress circle {
+  stroke: #1f1d1e !important;
+  filter: drop-shadow(0 0 4px rgba(31, 29, 30, 0.5)) !important;
+}
+
+.page-theme-white .next-stage-btn-stroke {
+  border-color: rgba(31, 29, 30, 0.35) !important;
+  box-shadow: 0 0 12px 2px rgba(31, 29, 30, 0.2) !important;
+}
+
+/* Stage 5 Zero Academy Title at the very end */
+.stage5-zero-academy {
+  position: fixed;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.96);
+  z-index: 5;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stage5-zero-academy.is-visible {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.stage5-zero-academy .s5-sub {
+  font-family: 'PP Supply Mono', 'Supply Sans', monospace;
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  color: #3e6a5e;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.stage5-zero-academy .s5-title {
+  font-family: 'STKBureau-SerifBook', 'Newsreader', Georgia, serif;
+  font-size: 48px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: #1f1d1e;
+  line-height: 1.1;
+  text-shadow: 0 2px 14px rgba(255, 255, 255, 0.95);
+}
+
+@media (max-width: 768px) {
+  .stage5-zero-academy .s5-title {
+    font-size: 32px;
+  }
+}
+
+
+

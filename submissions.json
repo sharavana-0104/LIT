@@ -1,0 +1,46 @@
+[
+  {
+    "email": "sharavana_test@example.com",
+    "name": "Sharavana Chandramohan",
+    "age": "24",
+    "city": "Chennai",
+    "education": "graduate",
+    "university": "Anna University",
+    "notes": "Testing email dispatch to sharavanacomputer2007@gmail.com",
+    "targetEmail": "sharavanacomputer2007@gmail.com",
+    "receivedAt": "2026-09-25T23:31:02.032Z"
+  },
+  {
+    "email": "csckrpt10@gmail.com",
+    "name": "Sharavana Chandramohan",
+    "age": "18",
+    "city": "CHENNAI",
+    "education": "university",
+    "university": "LOYOLA INSTITUTE OF TECHNOLOGY",
+    "notes": "no",
+    "targetEmail": "sharavanacomputer2007@gmail.com",
+    "receivedAt": "2026-09-25T23:37:39.874Z"
+  },
+  {
+    "email": "test_student@example.com",
+    "name": "Test Student",
+    "age": "21",
+    "city": "Coimbatore",
+    "education": "university",
+    "university": "PSG Tech",
+    "notes": "Testing email dispatch to sharavanacomputer2007@gmail.com",
+    "targetEmail": "sharavanacomputer2007@gmail.com",
+    "receivedAt": "2026-09-27T10:50:17.337Z"
+  },
+  {
+    "email": "test_student@example.com",
+    "name": "Test Student",
+    "age": "21",
+    "city": "Coimbatore",
+    "education": "university",
+    "university": "PSG Tech",
+    "notes": "Testing email dispatch to sharavanacomputer2007@gmail.com",
+    "targetEmail": "sharavanacomputer2007@gmail.com",
+    "receivedAt": "2026-09-27T10:53:58.482Z"
+  }
+]
