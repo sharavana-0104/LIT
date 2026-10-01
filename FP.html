@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bloom QR</title>
+<style>
+  html,body{margin:0;height:100%;background:#0d1f12;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#7a2e4a;-webkit-tap-highlight-color:transparent;cursor:none}
+  body{background-image:url('/assets/ui/nature_bg_fp.jpg');background-size:cover;background-position:center;background-repeat:no-repeat}
+  canvas{display:block;width:100%;height:100%;cursor:none;position:fixed;top:0;left:0;z-index:1}
+  *{cursor:none !important}
+  /* Soft vignette for depth — sits between bg and canvas */
+  #fp-vignette{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    background:radial-gradient(ellipse 110% 110% at 50% 50%,
+      transparent 30%,
+      rgba(10,25,15,0.35) 65%,
+      rgba(5,15,8,0.65) 100%);
+  }
+  /* ---- Custom cursor ---- */
+  #fp-cursor{
+    position:fixed;
+    top:0;left:0;
+    width:70px;height:70px;
+    background:url('/assets/ui/cursors_atlas.webp') no-repeat;
+    background-size:210px 140px; /* 3 cols x 2 rows */
+    image-rendering:pixelated;
+    pointer-events:none;
+    z-index:99999;
+    transform:translate(-2px,-2px);
+    will-change:transform;
+    transition:background-position 60ms step-end;
+  }
+  .ui{position:fixed;left:0;right:0;display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:0 12px;pointer-events:none}
+  .ui>*{pointer-events:auto}
+  #top{top:calc(12px + env(safe-area-inset-top,0px))}
+  #bottom{
+    bottom:0;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    background:rgba(253, 240, 240, 0.94);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    padding:12px 20px calc(14px + env(safe-area-inset-bottom,0px)) 20px;
+    z-index:100;
+    pointer-events:auto;
+    border-radius:24px 24px 0 0;
+    max-width:520px;
+    margin:0 auto;
+    box-shadow:0 -8px 30px rgba(122, 46, 74, 0.12);
+    border:1px solid rgba(243, 198, 214, 0.7);
+    border-bottom:none;
+    transition:transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  #bottom.is-minimized .collapsible-controls {
+    display: none;
+  }
+  .fp-panel-toggle {
+    background: none;
+    border: none;
+    color: #7a2e4a;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px;
+    border-radius: 99px;
+    background: rgba(122, 46, 74, 0.08);
+  }
+  .fp-panel-toggle:hover {
+    background: rgba(122, 46, 74, 0.14);
+  }
+  .collapsible-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    pointer-events: auto;
+  }
+  .collapsible-controls * { pointer-events: auto; }
+  input{width:min(90vw,380px);padding:8px 16px;border-radius:99px;border:1.5px solid #f3c6d6;background:#fff;color:#7a2e4a;font-size:13px;outline:none;box-sizing:border-box;box-shadow:0 2px 6px rgba(122,46,74,.05)}
+  input:focus{border-color:#7a2e4a}
+  .chip,.btn{border:1px solid #f3c6d6;background:#fff;color:#7a2e4a;border-radius:99px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:500;box-shadow:0 2px 5px rgba(122,46,74,.04);transition:all .2s ease}
+  .chip:hover,.btn:hover{border-color:#7a2e4a;transform:translateY(-1px)}
+  .chip.on{background:#7a2e4a;color:#fff;border-color:#7a2e4a;box-shadow:0 3px 10px rgba(122,46,74,.25)}
+  .dot{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #f3c6d6;cursor:pointer;padding:0;transition:transform .2s ease}
+  .dot:hover{transform:scale(1.15)}
+  .dot.on{box-shadow:0 0 0 2.5px #7a2e4a;transform:scale(1.12)}
+  #hint{font-size:13.5px;letter-spacing:.02em;font-weight:600;color:#7a2e4a;padding:1px 0}
+  #load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fdf0f0;transition:opacity .5s;pointer-events:none;font-weight:600;font-size:16px;z-index:99999}
+  .fp-top-bar{position:fixed;top:16px;right:16px;z-index:9999;display:flex;align-items:center;gap:12px}
+  .fp-back-btn{background:#7a2e4a;color:#fff;border:none;border-radius:99px;padding:9px 18px;font-size:13px;font-weight:600;letter-spacing:.04em;cursor:pointer;box-shadow:0 4px 14px rgba(122,46,74,.25);transition:transform .2s,background .2s}
+  .fp-back-btn:hover{background:#94375b;transform:scale(1.04)}
+
+  /* Red Tap & Hold Loop Connection button for -1 BZ -> 0 BZ */
+  .fp-loop-trigger {
+    position: relative;
+    width: 68px;
+    height: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: none;
+    /* Visibility transition: shown in bouquet view, hidden in QR/spread view */
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .fp-loop-trigger.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.85);
+  }
+  .fp-loop-btn {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    border: none;
+    position: relative;
+    cursor: pointer;
+    background: radial-gradient(circle, rgba(220, 38, 38, 0) 0% 18%, #ef4444 45%, #dc2626 62%, rgba(239, 68, 68, 0.6) 82%, rgba(220, 38, 38, 0) 100%);
+    box-shadow: 0 0 28px 10px rgba(239, 68, 68, 0.75), 0 0 70px 30px rgba(220, 38, 38, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    outline: none;
+    padding: 0;
+  }
+  .fp-loop-btn:hover {
+    transform: scale(1.08);
+  }
+  .fp-loop-btn:active {
+    transform: scale(0.95);
+  }
+  .fp-loop-btn::before,
+  .fp-loop-btn::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 130%;
+    height: 130%;
+    border-radius: 50%;
+    pointer-events: none;
+    background: radial-gradient(circle, rgba(239, 68, 68, 0) 40%, rgba(239, 68, 68, 0.3) 64%, rgba(255, 60, 60, 0.9) 86%, #ff2233 94%, rgba(239, 68, 68, 0) 96%);
+    animation: 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite fp-loop-ripple;
+  }
+  .fp-loop-btn::after {
+    animation-delay: 1.4s;
+  }
+  @keyframes fp-loop-ripple {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+    30% { opacity: 0.9; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
+  }
+  .fp-loop-stroke {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(248, 113, 113, 0.7);
+    box-shadow: 0 0 14px 3px rgba(239, 68, 68, 0.6);
+    pointer-events: none;
+  }
+  .fp-loop-progress {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 126%;
+    height: 126%;
+    transform: translate(-50%, -50%) rotate(-90deg);
+    pointer-events: none;
+    overflow: visible;
+  }
+  .fp-loop-progress circle {
+    fill: none;
+    stroke: #ff334b;
+    stroke-width: 4px;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 8px #ef4444) drop-shadow(0 0 16px rgba(239, 68, 68, 0.8));
+    transition: stroke-dashoffset 40ms linear;
+  }
+  .fp-loop-text {
+    font-family: 'PP Supply Mono', 'Supply Sans', monospace, sans-serif;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: #ffffff;
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 0.05em;
+    pointer-events: none;
+    text-shadow: 0 0 8px rgba(0,0,0,0.6), 0 0 14px rgba(239, 68, 68, 0.9);
+  }
+  .fp-loop-label {
+    position: absolute;
+    right: calc(100% + 14px);
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: 'PP Supply Mono', 'Supply Sans', monospace, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: right;
+    white-space: pre-line;
+    color: #ff334b;
+    text-shadow: 0 0 10px rgba(255, 51, 75, 0.8), 0 0 20px rgba(239, 68, 68, 0.6);
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+<div class="fp-top-bar">
+  <div class="fp-loop-trigger is-hidden" id="fpLoopTrigger" title="Tap and hold to loop back to 0 BZ">
+    <div class="fp-loop-label">LOOP<br>0 BZ</div>
+    <button class="fp-loop-btn" id="fpLoopBtn" type="button" aria-label="Tap and Hold to loop back to 0 BZ">
+      <div class="fp-loop-stroke"></div>
+      <svg class="fp-loop-progress" viewBox="0 0 88 88" aria-hidden="true">
+        <circle id="fpLoopCircle" cx="44" cy="44" r="40" stroke-dasharray="251.32" stroke-dashoffset="251.32"></circle>
+      </svg>
+      <div class="fp-loop-text">TAP<br>HOLD</div>
+    </button>
+  </div>
+</div>
+<div id="fp-vignette" aria-hidden="true"></div>
+<div id="fp-cursor" aria-hidden="true"></div>
+<div id="load">Arranging the flowers…</div>
+<div class="ui" id="bottom">
+  <div style="display:flex;align-items:center;justify-content:space-between;width:100%;max-width:380px;">
+    <div id="hint">Tap the bouquet to bloom a QR code</div>
+    <button class="fp-panel-toggle" id="togglePanel" type="button">Controls ▾</button>
+  </div>
+  <div class="collapsible-controls" id="panelControls">
+    <input id="link" type="text" placeholder="Type a link and press Enter">
+    <div class="ui" id="types" style="position:static"></div>
+    <div class="ui" id="pals" style="position:static"></div>
+    <div class="ui" style="position:static">
+      <button class="btn" id="copy">Copy link</button>
+      <button class="btn" id="dl">Download image</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+// ---------- config ----------
+const TYPES = {
+  Peony:[{n:8,len:.52,w:.24,tilt:.9,z:0},{n:7,len:.44,w:.22,tilt:.55,z:.05,off:.3},{n:6,len:.34,w:.2,tilt:.25,z:.1},{n:5,len:.22,w:.16,tilt:.05,z:.14}],
+  Lily:[{n:6,len:.64,w:.13,tilt:.5,z:0},{n:3,len:.5,w:.1,tilt:.8,z:.03,off:.5}],
+  Rose:[{n:5,len:.5,w:.22,tilt:.5,z:0},{n:5,len:.4,w:.2,tilt:.8,z:.05,off:.6},{n:4,len:.3,w:.18,tilt:1.05,z:.1,off:.2},{n:3,len:.2,w:.14,tilt:1.3,z:.14}],
+  Lotus:[{n:8,len:.62,w:.14,tilt:.35,z:0},{n:8,len:.5,w:.14,tilt:.6,z:.04,off:.4},{n:6,len:.36,w:.12,tilt:.85,z:.08}]
+};
+const PALS = {
+  Original:['#a3164f','#7b1e5a','#c2185b','#5b2a86','#8e1b3a'],
+  Blush:['#b23a5e','#9c2f56','#c94f75','#7a2145'],
+  Marigold:['#c26a00','#a34a00','#d98a00','#8a3b00'],
+  Sunbeam:['#b8860b','#9a6b00','#c99a00','#7a5200'],
+  Poppy:['#a4161a','#8b0f14','#c1121f','#6a040f'],
+  Azure:['#124e8c','#0b3a6e','#1d6fb8','#0a2c57'],
+  Dusk:['#4b2a9a','#3a1f7a','#5f3dc4','#2a1560']
+};
+let link = new URLSearchParams(location.search).get('u') || 'upi://pay?pa=chandramohansharavana@okicici&pn=Sharavana%20Chandramohan&aid=uGICAgOCUpcWBTw';
+let type = 'Peony', pal = 'Original';
+const CARD = 3.4, QR_Y = 2.7;
+
+// ---------- three setup ----------
+const renderer = new THREE.WebGLRenderer({antialias:true, preserveDrawingBuffer:true, alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x000000, 0);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = null;
+const camera = new THREE.PerspectiveCamera(38,1,.1,100);
+scene.add(new THREE.HemisphereLight(0xffffff,0xf0d9e0,.95));
+const sun = new THREE.DirectionalLight(0xffffff,.8); sun.position.set(2,4,6); scene.add(sun);
+
+function resize(){
+  const w=innerWidth,h=innerHeight; renderer.setSize(w,h); camera.aspect=w/h;
+  const need = 4.8/(2*Math.tan(THREE.MathUtils.degToRad(19))*camera.aspect);
+  camera.position.set(0,1.3,Math.max(12,need)); camera.lookAt(0,1.1,0); camera.updateProjectionMatrix();
+}
+addEventListener('resize',resize); resize();
+
+// vase
+const vasePts=[[0,-1.5],[.5,-1.5],[.75,-1.2],[.9,-.6],[.7,-.05],[.5,.1],[.56,.17],[.42,.17]].map(p=>new THREE.Vector2(p[0],p[1]));
+const vase = new THREE.Mesh(new THREE.LatheGeometry(vasePts,48),
+  new THREE.MeshStandardMaterial({color:'#8b5a2b',roughness:.6,metalness:0,side:THREE.DoubleSide,transparent:true,opacity:1}));
+scene.add(vase);
+
+const group = new THREE.Group(); scene.add(group);
+const card = new THREE.Mesh(new THREE.PlaneGeometry(CARD,CARD),
+  new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:0}));
+card.position.set(0,QR_Y,-.05); group.add(card);
+
+// ---------- flower geometry ----------
+function petal(len,w,tilt,ang,z){
+  const g=new THREE.SphereGeometry(1,10,8).toNonIndexed();
+  g.scale(w,len/2,.05); g.translate(0,len/2,0);
+  g.applyMatrix4(new THREE.Matrix4().makeRotationX(tilt)); g.translate(0,0,z);
+  g.applyMatrix4(new THREE.Matrix4().makeRotationZ(ang)); return g;
+}
+function merge(list){
+  let n=0; list.forEach(g=>n+=g.attributes.position.count*3);
+  const pos=new Float32Array(n), nor=new Float32Array(n); let o=0;
+  list.forEach(g=>{pos.set(g.attributes.position.array,o);nor.set(g.attributes.normal.array,o);o+=g.attributes.position.count*3;});
+  const m=new THREE.BufferGeometry();
+  m.setAttribute('position',new THREE.BufferAttribute(pos,3)); m.setAttribute('normal',new THREE.BufferAttribute(nor,3)); return m;
+}
+function flowerGeo(t){
+  const parts=[];
+  TYPES[t].forEach(r=>{for(let k=0;k<r.n;k++)parts.push(petal(r.len,r.w,r.tilt,(r.off||0)+k*Math.PI*2/r.n,r.z));});
+  const c=new THREE.SphereGeometry(.09,10,8).toNonIndexed(); c.scale(1,1,.6); c.translate(0,0,.12);
+  return {petals:merge(parts),center:c};
+}
+
+// ---------- QR + bouquet build ----------
+let F=[], petalMesh, centerMesh, stems, stemIdx=[], baseCols=[], N=0;
+const Z=new THREE.Vector3(0,0,1), ident=new THREE.Quaternion();
+const yellow=new THREE.Color('#ffd35c'), darkC=new THREE.Color('#2a1a10');
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+function build(){
+  if(petalMesh){group.remove(petalMesh,centerMesh,stems);petalMesh.geometry.dispose();centerMesh.geometry.dispose();stems.geometry.dispose();}
+  let q; try{q=qrcode(0,'M');q.addData(link);q.make();}catch(e){q=qrcode(0,'L');q.addData('https://www.typingmind.com/');q.make();}
+  const n=q.getModuleCount(), m=CARD/(n+4), cells=[];
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))cells.push([c,r]);
+  N=cells.length; const g=flowerGeo(type), colors=PALS[pal];
+  petalMesh=new THREE.InstancedMesh(g.petals,new THREE.MeshStandardMaterial({roughness:.6,side:THREE.DoubleSide}),N);
+  centerMesh=new THREE.InstancedMesh(g.center,new THREE.MeshStandardMaterial({roughness:.7}),N);
+  petalMesh.frustumCulled=centerMesh.frustumCulled=false;
+  group.add(petalMesh,centerMesh);
+  F=[];baseCols=[];
+  const ga=Math.PI*(3-Math.sqrt(5));
+  cells.forEach(([c,r],i)=>{
+    // fibonacci dome (upper hemisphere + a little skirt)
+    const yy=1-(i+.5)/N*1.25, rad=Math.sqrt(Math.max(0,1-yy*yy)), th=i*ga;
+    const dir=new THREE.Vector3(Math.cos(th)*rad,yy,Math.sin(th)*rad).normalize();
+    const R=1.35+rnd(-.08,.12);
+    const bp=new THREE.Vector3(dir.x*R,.95+dir.y*R*.95,dir.z*R);
+    const bq=new THREE.Quaternion().setFromUnitVectors(Z,dir).multiply(new THREE.Quaternion().setFromAxisAngle(Z,rnd(0,6.28)));
+    F.push({bp,bq,qp:new THREE.Vector3((c-(n-1)/2)*m,QR_Y-(r-(n-1)/2)*m,0),
+      bs:rnd(.19,.27),qs:m*1.08,d:Math.random()*.35,h:rnd(.4,1),zz:rnd(.2,1.2),spin:rnd(-2,2),dir});
+    baseCols.push(new THREE.Color(colors[Math.floor(Math.random()*colors.length)]));
+  });
+  // stems: top-most flowers
+  stemIdx=F.map((f,i)=>i).sort((a,b)=>F[b].bp.y-F[a].bp.y).filter((_,k)=>k%3===0).slice(0,26);
+  const sg=new THREE.BufferGeometry(); sg.setAttribute('position',new THREE.BufferAttribute(new Float32Array(stemIdx.length*6),3));
+  stems=new THREE.LineSegments(sg,new THREE.LineBasicMaterial({color:'#5aa469',transparent:true}));
+  stems.frustumCulled=false; group.add(stems);
+}
+
+// ---------- butterflies ----------
+function wingGeo(){
+  const sh=new THREE.Shape();
+  sh.moveTo(0,0); sh.bezierCurveTo(.15,.45,.75,.55,.7,.15);
+  sh.bezierCurveTo(.65,-.05,.5,-.05,.4,-.15); sh.bezierCurveTo(.45,-.5,.2,-.55,0,-.1); sh.lineTo(0,0);
+  const g=new THREE.ShapeGeometry(sh,12); g.rotateX(Math.PI/2); return g;
+}
+const WG=wingGeo(), BF=[], EXITS=[[7,4.5,2],[-7,5,1],[6,-1,3],[-6,3.5,-2]];
+[['#ff8c1a','#1a1a1a'],['#4dabf7','#0b3a6e'],['#ffd60a','#5a3c00'],['#f783ac','#6a1b3a']].forEach((c,i)=>{
+  const g=new THREE.Group(); g.scale.setScalar(.42); g.rotation.order='YXZ';
+  const m1=new THREE.MeshStandardMaterial({color:c[0],side:THREE.DoubleSide,roughness:.5});
+  const m2=new THREE.MeshStandardMaterial({color:c[1],side:THREE.DoubleSide,roughness:.5});
+  const dark=new THREE.MeshStandardMaterial({color:'#1b1210'});
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(.035,.03,.55,8).rotateX(Math.PI/2),dark));
+  const head=new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),dark); head.position.z=.3; g.add(head);
+  const pl=new THREE.Group(), pr=new THREE.Group(); pr.scale.x=-1;
+  [pl,pr].forEach(p=>{
+    p.add(new THREE.Mesh(WG,m1));
+    const inner=new THREE.Mesh(WG,m2); inner.scale.set(.5,1,.5); inner.position.y=.004; p.add(inner);
+    g.add(p);
+  });
+  const pro=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,.3,4).rotateX(Math.PI/2),dark);
+  pro.position.set(0,-.08,.45); pro.rotation.x=.6; pro.visible=false; g.add(pro);
+  const e=EXITS[i]; g.position.set(e[0],e[1],e[2]);
+  group.add(g);
+  BF.push({g,pl,pr,pro,vel:new THREE.Vector3(),tgt:null,face:new THREE.Vector3(),hover:0,ph:Math.random()*6,exit:new THREE.Vector3(...e),hovering:false});
+});
+function pickTarget(b){
+  for(let k=0;k<12;k++){
+    const f=F[Math.floor(Math.random()*N)];
+    if(f.dir.z>-.1){ b.tgt=f.bp.clone().addScaledVector(f.dir,.34); b.face.copy(f.dir).negate(); return; }
+  }
+  const f=F[0]; b.tgt=f.bp.clone().addScaledVector(f.dir,.34); b.face.copy(f.dir).negate();
+}
+function updB(dt,now){
+  const leaving = target===1 || T>0.02;
+  BF.forEach(b=>{
+    const g=b.g;
+    if(leaving){
+      if(!g.visible) return;
+      b.hovering=false; b.pro.visible=false;
+      if(g.position.distanceTo(b.exit)<.8){ g.visible=false; return; }
+      moveB(b,b.exit,3,dt);
+    } else {
+      if(!g.visible){ g.visible=true; g.position.copy(b.exit); b.tgt=null; }
+      if(!b.tgt) pickTarget(b);
+      const d=g.position.distanceTo(b.tgt);
+      if(!b.hovering && d<.07){ b.hovering=true; b.hover=rnd(1.6,3.2); }
+      if(b.hovering){
+        b.hover-=dt; b.vel.multiplyScalar(.9);
+        g.position.lerp(b.tgt,1-Math.exp(-dt*4));
+        g.position.y+=Math.sin(now/300+b.ph)*.0015;
+        if(b.hover<=0){ b.hovering=false; pickTarget(b); }
+      } else {
+        // wander a little while travelling
+        const w=b.tgt.clone(); w.y+=Math.sin(now/500+b.ph)*.25; w.x+=Math.cos(now/650+b.ph)*.2;
+        moveB(b,d>1?w:b.tgt,Math.min(1.5,.3+d*1.4),dt);
+      }
+      b.pro.visible=b.hovering;
+    }
+    // heading
+    let yaw;
+    if(b.hovering) yaw=Math.atan2(b.face.x,b.face.z);
+    else if(b.vel.lengthSq()>.01) yaw=Math.atan2(b.vel.x,b.vel.z); else yaw=g.rotation.y;
+    let df=yaw-g.rotation.y; df=Math.atan2(Math.sin(df),Math.cos(df));
+    g.rotation.y+=df*(1-Math.exp(-dt*6));
+    g.rotation.x+=((b.hovering?.5:-.12)-g.rotation.x)*(1-Math.exp(-dt*5));
+    // flap
+    b.ph+=dt*(b.hovering?9:22);
+    const a=.1+(.5+.5*Math.sin(b.ph))*(b.hovering?.8:1.1);
+    b.pl.rotation.z=a; b.pr.rotation.z=a;
+  });
+}
+function moveB(b,dest,speed,dt){
+  const dir=dest.clone().sub(b.g.position); if(dir.length()>.001) dir.normalize();
+  b.vel.lerp(dir.multiplyScalar(speed),1-Math.exp(-dt*2.5));
+  b.g.position.addScaledVector(b.vel,dt);
+  b.g.position.y+=Math.sin(performance.now()/90+b.ph)*.003;
+}
+
+// ---------- animation ----------
+const dummy=new THREE.Object3D(), tc=new THREE.Color(), tq=new THREE.Quaternion();
+let T=0, target=0, last=performance.now();
+
+// Tap & Hold button: hidden at bouquet (T≈0), visible when QR is spread (T≈1)
+// Use hysteresis: show when T crosses UP past 0.8, hide when T crosses DOWN past 0.2
+const _loopTrigger = document.getElementById('fpLoopTrigger');
+let _loopShown = false; // matches initial is-hidden state
+function updateLoopBtnVisibility() {
+  if (!_loopTrigger) return;
+  if (!_loopShown && T >= 0.8) {
+    // Zoomed out enough → show TAP & HOLD
+    _loopShown = true;
+    _loopTrigger.classList.remove('is-hidden');
+  } else if (_loopShown && T <= 0.2) {
+    // Zoomed back in → hide TAP & HOLD
+    _loopShown = false;
+    _loopTrigger.classList.add('is-hidden');
+  }
+}
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000); last=now;
+  if(T!==target){T+=Math.sign(target-T)*dt/1.7; if((target-T)*Math.sign(target-T+1e-9)<0||Math.abs(target-T)<.003)T=target;}
+  updateLoopBtnVisibility();
+  updB(dt,now);
+  group.rotation.y=Math.sin(now/1500)*.28*(1-Math.min(1,T*1.6));
+  const pos=stems.geometry.attributes.position.array;
+  for(let i=0;i<N;i++){
+    const f=F[i]; let u=Math.min(1,Math.max(0,(T-f.d)/.65)); u=u*u*(3-2*u); const a=Math.sin(Math.PI*u);
+    dummy.position.lerpVectors(f.bp,f.qp,u); dummy.position.y+=a*f.h*.7; dummy.position.z+=a*f.zz;
+    tq.slerpQuaternions(f.bq,ident,u); dummy.quaternion.copy(tq);
+    dummy.rotateZ(a*f.spin);
+    dummy.scale.setScalar(f.bs+(f.qs-f.bs)*u); dummy.updateMatrix();
+    petalMesh.setMatrixAt(i,dummy.matrix); centerMesh.setMatrixAt(i,dummy.matrix);
+    tc.copy(baseCols[i]).lerp(darkC,u*.35); petalMesh.setColorAt(i,tc);
+    tc.copy(yellow).lerp(darkC,u); centerMesh.setColorAt(i,tc);
+    const k=stemIdx.indexOf(i);
+    if(k>=0){pos.set([0,.12,0,dummy.position.x-f.dir.x*.15,dummy.position.y-f.dir.y*.15,dummy.position.z-f.dir.z*.15],k*6);}
+  }
+  petalMesh.instanceMatrix.needsUpdate=centerMesh.instanceMatrix.needsUpdate=true;
+  petalMesh.instanceColor.needsUpdate=centerMesh.instanceColor.needsUpdate=true;
+  stems.geometry.attributes.position.needsUpdate=true; stems.material.opacity=Math.max(0,1-T*2.2); stems.visible=stems.material.opacity>0;
+  vase.material.opacity=Math.max(0,1-T*1.8); vase.visible=vase.material.opacity>0.01;
+  card.material.opacity=Math.min(1,Math.max(0,(T-.55)/.4));
+  renderer.render(scene,camera); requestAnimationFrame(frame);
+}
+
+// ---------- UI ----------
+const hint=document.getElementById('hint');
+renderer.domElement.addEventListener('click',()=>{
+  target=target?0:1; hint.textContent=target?'Tap to gather the bouquet':'Tap the bouquet to bloom a QR code';
+});
+const typesEl=document.getElementById('types'), palsEl=document.getElementById('pals');
+Object.keys(TYPES).forEach(t=>{const b=document.createElement('button');b.className='chip'+(t===type?' on':'');b.textContent=t;
+  b.onclick=()=>{type=t;[...typesEl.children].forEach(x=>x.classList.toggle('on',x===b));build();};typesEl.appendChild(b);});
+Object.keys(PALS).forEach(p=>{const b=document.createElement('button');b.className='dot'+(p===pal?' on':'');b.title=p;
+  b.style.background=`linear-gradient(135deg,${PALS[p][0]},${PALS[p][2]})`;
+  b.onclick=()=>{pal=p;[...palsEl.children].forEach(x=>x.classList.toggle('on',x===b));build();};palsEl.appendChild(b);});
+const input=document.getElementById('link'); input.value=link;
+input.addEventListener('keydown',e=>{if(e.key==='Enter'){let v=input.value.trim();if(v){if(!/^[a-z][a-z0-9+.-]*:/i.test(v))v='https://'+v;link=v;input.value=v;build();input.blur();}}});
+document.getElementById('copy').onclick=async e=>{
+  const u=location.href.split('?')[0]+'?u='+encodeURIComponent(link);
+  try{await navigator.clipboard.writeText(u);e.target.textContent='Copied!';}catch(_){e.target.textContent='Copy failed';}
+  setTimeout(()=>e.target.textContent='Copy link',1400);
+};
+document.getElementById('dl').onclick=()=>{
+  renderer.render(scene,camera); const a=document.createElement('a');
+  a.href=renderer.domElement.toDataURL('image/png'); a.download='bloom-qr.png'; a.click();
+};
+
+const toggleBtn = document.getElementById('togglePanel');
+const bottomEl = document.getElementById('bottom');
+if (toggleBtn && bottomEl) {
+  toggleBtn.onclick = (e) => {
+    e.stopPropagation();
+    const isMin = bottomEl.classList.toggle('is-minimized');
+    toggleBtn.textContent = isMin ? 'Controls ▸' : 'Controls ▾';
+  };
+  // Auto-minimize controls when entering -1 BZ (page load)
+  bottomEl.classList.add('is-minimized');
+  toggleBtn.textContent = 'Controls ▸';
+}
+
+// ---------- Red Tap & Hold Loop Controller (-1 BZ -> 0 BZ) ----------
+(function initFPLoopButton() {
+  const btn = document.getElementById('fpLoopBtn');
+  const circle = document.getElementById('fpLoopCircle');
+  if (!btn || !circle) return;
+
+  const circumference = 2 * Math.PI * 40; // ~251.32
+  const HOLD_DURATION = 1800; // 1.8 seconds hold
+  let holdStart = null;
+  let rafId = null;
+  let isHolding = false;
+
+  function setProgress(progress) {
+    const p = Math.max(0, Math.min(1, progress));
+    const offset = circumference * (1 - p);
+    circle.style.strokeDashoffset = offset;
+  }
+
+  function loopBackToZero() {
+    isHolding = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    setProgress(1);
+
+    // Pulse feedback animation
+    btn.style.transform = 'scale(1.22)';
+    btn.style.boxShadow = '0 0 50px 25px rgba(239, 68, 68, 0.95), 0 0 120px 60px rgba(220, 38, 38, 0.7)';
+
+    setTimeout(() => {
+      if (window.parent && typeof window.parent.__closeFPOverlay === 'function') {
+        window.parent.__closeFPOverlay();
+      } else if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.close();
+      }
+      setTimeout(() => {
+        btn.style.transform = '';
+        btn.style.boxShadow = '';
+        setProgress(0);
+      }, 500);
+    }, 180);
+  }
+
+  function startHold(e) {
+    if (e.button && e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isHolding = true;
+    holdStart = performance.now();
+    btn.style.transform = 'scale(0.96)';
+
+    function tick(now) {
+      if (!isHolding) return;
+      const elapsed = now - holdStart;
+      const progress = Math.min(elapsed / HOLD_DURATION, 1);
+      setProgress(progress);
+
+      if (progress >= 1) {
+        loopBackToZero();
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function cancelHold(e) {
+    if (!isHolding) return;
+    isHolding = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    holdStart = null;
+    btn.style.transform = '';
+    setProgress(0);
+  }
+
+  btn.addEventListener('pointerdown', startHold);
+  window.addEventListener('pointerup', cancelHold);
+  window.addEventListener('pointercancel', cancelHold);
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+})();
+
+build(); requestAnimationFrame(frame);
+setTimeout(()=>document.getElementById('load').style.opacity=0,300);
+
+// ---------- Custom cursor (sprite atlas) ----------
+(function initFPCursor(){
+  const cur = document.getElementById('fp-cursor');
+  if(!cur) return;
+
+  // Sprite positions in the 3x2 atlas (each cell 70x70px, sheet 210x140)
+  // Col x Row  =>  background-position: -col*70px  -row*70px
+  const FRAMES = {
+    arrow:   '0px 0px',       // row0 col0 — default arrow
+    pointer: '-70px 0px',     // row0 col1 — finger/pointer (hover)
+    hand:    '-140px 0px',    // row0 col2 — open hand (canvas)
+    grab:    '0px -70px',     // row1 col0 — grabbing / pressed
+    text:    '-70px -70px',   // row1 col1 — text input
+    move:    '-140px -70px',  // row1 col2 — move/crosshair
+  };
+
+  let cx=0, cy=0;
+  let frame='arrow';
+  let mouseDown=false;
+
+  function setFrame(f){
+    if(frame===f) return;
+    frame=f;
+    cur.style.backgroundPosition = FRAMES[f];
+  }
+
+  // Track mouse position with RAF for smooth follow
+  let rafPending=false;
+  window.addEventListener('pointermove', e=>{
+    cx = e.clientX; cy = e.clientY;
+    if(!rafPending){
+      rafPending=true;
+      requestAnimationFrame(()=>{
+        cur.style.transform=`translate(${cx-2}px,${cy-2}px)`;
+        rafPending=false;
+      });
+    }
+
+    // Determine cursor frame from the actual event target
+    if(!mouseDown) pickFrame(e.target);
+  }, {passive:true});
+
+  // pointerover fires on element entry — most reliable for cursor switching
+  window.addEventListener('pointerover', e=>{
+    if(!mouseDown) pickFrame(e.target);
+  }, {passive:true});
+
+  function pickFrame(el) {
+    if(!el){ setFrame('arrow'); return; }
+    const tag = el.tagName;
+    if(tag==='INPUT'||tag==='TEXTAREA') setFrame('text');
+    else if(el.closest('button,[role="button"],a,label,.chip,.btn,.dot,.fp-panel-toggle,.fp-loop-btn')) setFrame('pointer');
+    else if(tag==='CANVAS') setFrame('hand');
+    else setFrame('arrow');
+  }
+
+  window.addEventListener('pointerdown', e=>{ mouseDown=true; setFrame('grab'); }, {passive:true});
+  window.addEventListener('pointerup',   e=>{ mouseDown=false; pickFrame(e.target); }, {passive:true});
+  window.addEventListener('pointercancel',()=>{ mouseDown=false; setFrame('arrow'); }, {passive:true});
+
+  // Hide cursor when mouse leaves window
+  document.addEventListener('mouseleave', ()=>{ cur.style.opacity='0'; });
+  document.addEventListener('mouseenter', ()=>{ cur.style.opacity='1'; });
+})();
+</script>
+</body>
+</html>

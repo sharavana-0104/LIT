@@ -1,4 +1,57 @@
 /* Bloom QR Modal Styles */
+
+/* ─── Keyframe Animations ─────────────────────────────────────── */
+
+/* Backdrop: subtle vignette breathe */
+@keyframes bloom-backdrop-breathe {
+  0%, 100% { background: rgba(10, 20, 16, 0.72); }
+  50%       { background: rgba(10, 20, 16, 0.80); }
+}
+
+/* CEO strip: marquee scroll */
+@keyframes bloom-marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* QR code: looping horizontal scan-line sweep */
+@keyframes bloom-qr-scan {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 0.55; }
+  90%  { opacity: 0.55; }
+  100% { transform: translateY(200%); opacity: 0; }
+}
+
+/* QR code: outer glow ring pulse */
+@keyframes bloom-qr-glow {
+  0%, 100% { box-shadow: 0 0 0 0px rgba(34, 197, 94, 0), 0 0 0 3px rgba(34, 197, 94, 0); }
+  50%       { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.12), 0 0 18px 4px rgba(34, 197, 94, 0.10); }
+}
+
+/* CTA button: shimmer sweep left→right */
+@keyframes bloom-btn-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Avatar: soft float */
+@keyframes bloom-avatar-float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-3px); }
+}
+
+/* Staggered children fade-up */
+@keyframes bloom-child-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Stage-5 text shimmer */
+@keyframes bloom-text-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
 .bloom-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -46,6 +99,22 @@
   opacity: 1;
 }
 
+/* Stagger child sections after the card springs in */
+.bloom-modal-backdrop.is-active .bloom-card-header {
+  animation: bloom-child-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.18s;
+}
+
+.bloom-modal-backdrop.is-active .bloom-inner-card {
+  animation: bloom-child-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.26s;
+}
+
+.bloom-modal-backdrop.is-active .bloom-card-footer {
+  animation: bloom-child-in 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.36s;
+}
+
 .bloom-card-header {
   width: 100%;
   display: flex;
@@ -68,6 +137,7 @@
   object-fit: cover;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.8);
+  animation: bloom-avatar-float 4s ease-in-out infinite;
 }
 
 .bloom-name {
@@ -135,6 +205,30 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Clip the scan-line pseudo-element at the rounded corners */
+  border-radius: 12px;
+  overflow: hidden;
+  /* Pulsing glow ring to draw the eye to the QR */
+  animation: bloom-qr-glow 2.8s ease-in-out infinite;
+}
+
+/* Scan-line pseudo-element layered over the QR image */
+.bloom-qr-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Horizontal green gradient bar that sweeps down */
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(34, 197, 94, 0.35) 48%,
+    rgba(34, 197, 94, 0.55) 50%,
+    rgba(34, 197, 94, 0.35) 52%,
+    transparent 100%
+  );
+  animation: bloom-qr-scan 3.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation-delay: 0.8s;
 }
 
 .bloom-qr-code {
@@ -196,7 +290,17 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #1f1d1e;
+  /* Shimmer: gradient overlay sweeping left → right over dark base */
+  background:
+    linear-gradient(
+      105deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.18) 40%,
+      rgba(255, 255, 255, 0.28) 50%,
+      rgba(255, 255, 255, 0.18) 60%,
+      transparent 80%
+    ) #1f1d1e;
+  background-size: 200% auto;
   color: #ffffff;
   border: none;
   border-radius: 999px;
@@ -205,14 +309,18 @@
   font-weight: 500;
   cursor: pointer;
   text-decoration: none;
-  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  transition: transform 0.15s, box-shadow 0.2s;
   box-shadow: 0 4px 14px rgba(31, 29, 30, 0.25);
+  /* Shimmer runs every 3.5 s with a 1.5 s idle gap via delay */
+  animation: bloom-btn-shimmer 1.4s linear infinite;
+  animation-delay: 2s;
+  animation-play-state: running;
 }
 
 .bloom-open-btn:hover {
-  background: #333132;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(31, 29, 30, 0.35);
+  animation-play-state: paused; /* pause shimmer on hover — feels intentional */
 }
 
 .bloom-open-btn:active {
@@ -289,4 +397,256 @@
 }
 
 
+/* ─── Stage-5 Zero Academy title shimmer ──────────────────────── */
+.stage5-zero-academy.is-visible .s5-title {
+  background: linear-gradient(
+    105deg,
+    #1f1d1e 30%,
+    #4a8c6f 48%,
+    #1f1d1e 66%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: bloom-text-shimmer 3.5s linear infinite;
+  animation-delay: 1.2s;
+  text-shadow: none; /* override the white text-shadow while clipping */
+}
 
+/* ─── CEO / Company social-proof strip ────────────────────────── */
+.bloom-social-proof {
+  width: 100%;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.bloom-social-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9aa0a6;
+  margin: 0;
+}
+
+/* Track: clips overflow + fade-edge mask */
+.bloom-marquee-track {
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    #000 14%,
+    #000 86%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    #000 14%,
+    #000 86%,
+    transparent 100%
+  );
+}
+
+/* Inner row: doubled list, scrolls left by 50% = one full copy */
+.bloom-marquee-inner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  width: max-content;
+  animation: bloom-marquee-scroll 22s linear infinite;
+}
+
+.bloom-marquee-inner:hover {
+  animation-play-state: paused;
+}
+
+/* Individual chip */
+.bloom-ceo-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.bloom-ceo-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Default white background — logo images sit on this */
+  background: #fff;
+  border: 1.5px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+  overflow: hidden;
+  /* Fallback text style (used by onerror) */
+  font-size: 12px;
+  font-weight: 700;
+  font-family: 'Google Sans Flex', 'Inter', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* The actual logo image inside the circle */
+.bloom-ceo-logo {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+  display: block;
+  /* Slight extra sharpness for small favicons */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.bloom-ceo-chip:hover .bloom-ceo-avatar {
+  transform: scale(1.14) translateY(-2px);
+  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18);
+}
+
+.bloom-ceo-label {
+  font-size: 9.5px;
+  font-weight: 500;
+  color: #9aa0a6;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  font-family: 'Google Sans Flex', 'Inter', system-ui, sans-serif;
+}
+
+
+/* ─── Reduced-motion: kill all decoration animations ──────────── */
+@media (prefers-reduced-motion: reduce) {
+  .bloom-qr-container,
+  .bloom-qr-container::after,
+  .bloom-avatar,
+  .bloom-open-btn,
+  .bloom-marquee-inner,
+  .bloom-modal-backdrop.is-active .bloom-card-header,
+  .bloom-modal-backdrop.is-active .bloom-inner-card,
+  .bloom-modal-backdrop.is-active .bloom-card-footer,
+  .stage5-zero-academy.is-visible .s5-title {
+    animation: none !important;
+  }
+
+  /* Keep the functional transitions (show/hide) but shorten them */
+  .bloom-modal-backdrop {
+    transition-duration: 0.15s;
+  }
+  .bloom-modal-card {
+    transition-duration: 0.15s;
+  }
+}
+
+/* ── -1 BZ FP Overlay ─────────────────────────────────────── */
+.fp-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fp-overlay-backdrop.is-active {
+  opacity: 1;
+  pointer-events: all;
+}
+.fp-experience-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+.fp-header-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-family: 'PP Supply Mono', monospace, sans-serif;
+  pointer-events: auto;
+}
+.fp-badge-tag {
+  background: #ef4444;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.fp-close-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 50%;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+.fp-close-btn:hover { background: rgba(255,255,255,0.25); }
+.fp-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+.bloom-qr-hold-trigger {
+  position: fixed;
+  left: clamp(20px, 4vw, 56px);
+  bottom: clamp(20px, 4vh, 48px);
+  z-index: 30;
+  width: 88px;
+  height: 88px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(8px) scale(0.92);
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s, transform 0.3s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.bloom-qr-hold-trigger.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+  transform: translateY(0) scale(1);
+}
+
+.bloom-qr-hold-trigger .next-stage-btn {
+  opacity: 1;
+}
+
+.bloom-qr-hold-trigger .bloom-qr-hold-label {
+  left: calc(100% + 22px);
+}

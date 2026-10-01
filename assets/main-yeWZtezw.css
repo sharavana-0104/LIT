@@ -1870,5 +1870,64 @@ body.frame-open #ui-container:before {
     border-radius: inherit;
     position: absolute;
     inset: 0;
-    box-shadow: inset 0 0 1.75em #f2f2f24d
+}
+
+/* --- Map Panel Hero CEO Image Enhancements --- */
+.map-panel .mp-hero {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  height: auto !important;
+  min-height: 190px !important;
+  max-height: 220px !important;
+  border-radius: 22px !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  padding: 10px !important;
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  background: #0d0d11 !important;
+}
+
+.map-panel .mp-hero-blur-bg {
+  position: absolute !important;
+  inset: -10px !important;
+  width: calc(100% + 20px) !important;
+  height: calc(100% + 20px) !important;
+  object-fit: cover !important;
+  object-position: center !important;
+  filter: blur(22px) brightness(0.55) !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
+  transform: scale(1.1) !important;
+}
+
+.map-panel .mp-hero-media {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  z-index: 1 !important;
+  display: block !important;
+  image-rendering: -webkit-optimize-contrast !important;
+  image-rendering: auto !important;
+}
+
+.map-panel .mp-hero-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.02) 40%, rgba(0,0,0,0.7) 100%) !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+@media (max-width: 768px) {
+  .map-panel .mp-hero {
+    height: auto !important;
+    aspect-ratio: 16 / 9 !important;
+    min-height: 175px !important;
+  }
 }
